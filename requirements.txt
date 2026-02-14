@@ -1,0 +1,10 @@
+fastapi
+uvicorn[standard]
+python-jose[cryptography]
+passlib
+pyotp
+qrcode[pil]
+psycopg[binary]
+redis
+jinja2
+python-multipart

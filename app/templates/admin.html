@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>管理后台</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        .nav {
+            background-color: #f0f0f0;
+            padding: 10px;
+            margin-bottom: 20px;
+        }
+        .nav a {
+            margin-right: 10px;
+            text-decoration: none;
+            color: #333;
+        }
+        .content {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+        }
+        .logout {
+            margin-top: 20px;
+        }
+        .logout-btn {
+            background-color: #f44336;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .logout-btn:hover {
+            background-color: #d32f2f;
+        }
+        .create-btn {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .create-btn:hover {
+            background-color: #45a049;
+        }
+        .disable-btn {
+            background-color: #f44336;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .disable-btn:hover {
+            background-color: #d32f2f;
+        }
+        .form-group {
+            margin-bottom: 10px;
+        }
+        .form-group label {
+            display: inline-block;
+            width: 100px;
+        }
+        .form-group input {
+            padding: 5px;
+            width: 200px;
+        }
+        .create-user, .disable-user {
+            margin-bottom: 20px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .create-user-btn {
+            margin-bottom: 20px;
+        }
+        .create-user-form {
+            margin-bottom: 20px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+        .cancel-btn {
+            background-color: #999;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-left: 10px;
+        }
+        .cancel-btn:hover {
+            background-color: #777;
+        }
+        .user-table {
+            margin-top: 20px;
+            overflow-x: auto;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: #fff;
+        }
+        th, td {
+            text-align: left;
+            padding: 12px;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #f2f2f2;
+            font-weight: bold;
+        }
+        tr:hover {
+            background-color: #f5f5f5;
+        }
+        .delete-btn {
+            background-color: #ff9800;
+            color: white;
+            padding: 8px 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .delete-btn:hover {
+            background-color: #f57c00;
+        }
+        .confirm-delete {
+            background-color: #f44336 !important;
+        }
+        .confirm-delete:hover {
+            background-color: #d32f2f !important;
+        }
+        .qr-result {
+            margin-top: 20px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+            text-align: center;
+        }
+        #qrCodeImage img {
+            max-width: 300px;
+            max-height: 300px;
+        }
+        .ok-btn {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+        .ok-btn:hover {
+            background-color: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <div class="nav">
+        <a href="/admin">Admin</a> | <a href="/user">User</a> | <a href="/auth/logout" class="logout-btn">Logout</a>
+    </div>
+    <div class="content">
+        <h1>Admin Panel</h1>
+        <p>Welcome, Admin!</p>
+        
+        <h2>User Management</h2>
+        
+        <!-- Create User Button -->
+        <div class="create-user-btn">
+            <button type="button" class="create-btn" onclick="showCreateForm()">Create User</button>
+        </div>
+        
+        <!-- Create User Form (Hidden by default) -->
+        <div class="create-user-form" id="createForm" style="display: none;">
+            <h3>Create New User</h3>
+            <form id="createUserForm" onsubmit="createUser(event)">
+                <div class="form-group">
+                    <label for="username">Username:</label>
+                    <input type="text" id="username" name="username" required>
+                </div>
+                <button type="submit" class="create-btn">Submit</button>
+                <button type="button" class="cancel-btn" onclick="hideCreateForm()">Cancel</button>
+            </form>
+        </div>
+        
+        <!-- QR Code Result (Hidden by default) -->
+        <div class="qr-result" id="qrResult" style="display: none;">
+            <h3>QR Code</h3>
+            <div id="qrCodeImage"></div>
+            <button type="button" class="ok-btn" onclick="hideQrResult()">OK</button>
+        </div>
+        
+        <!-- User Table -->
+        <div class="user-table">
+            <table border="1" cellpadding="10" cellspacing="0">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Username</th>
+                        <th>Role</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in users %}
+                    <tr>
+                        <td>{{ user.id }}</td>
+                        <td>{{ user.username }}</td>
+                        <td>{{ user.role }}</td>
+                        <td>{{ user.is_active }}</td>
+                        <td>
+                            <button type="button" class="delete-btn" onclick="toggleDelete(this, {{ user.id }})">{{ '删除' }}</button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <div class="logout">
+            <form action="/auth/logout" method="post">
+                <button type="submit" class="logout-btn">Logout</button>
+            </form>
+        </div>
+        
+        <script>
+            function showCreateForm() {
+                document.getElementById('createForm').style.display = 'block';
+                document.getElementById('qrResult').style.display = 'none';
+            }
+            
+            function hideCreateForm() {
+                document.getElementById('createForm').style.display = 'none';
+            }
+            
+            function hideQrResult() {
+                document.getElementById('qrResult').style.display = 'none';
+                // 刷新页面以更新用户列表
+                window.location.reload();
+            }
+            
+            function createUser(event) {
+                event.preventDefault();
+                
+                const form = document.getElementById('createUserForm');
+                const formData = new FormData(form);
+                
+                fetch('/admin/users', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Failed to create user');
+                    }
+                    return response.blob();
+                })
+                .then(blob => {
+                    // 隐藏创建表单
+                    hideCreateForm();
+                    
+                    // 显示 QR Code 结果
+                    const qrResult = document.getElementById('qrResult');
+                    const qrCodeImage = document.getElementById('qrCodeImage');
+                    
+                    // 创建图片元素
+                    const img = document.createElement('img');
+                    img.src = URL.createObjectURL(blob);
+                    img.alt = 'QR Code';
+                    
+                    // 清空并添加图片
+                    qrCodeImage.innerHTML = '';
+                    qrCodeImage.appendChild(img);
+                    
+                    // 显示结果
+                    qrResult.style.display = 'block';
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Failed to create user');
+                });
+            }
+            
+            function toggleDelete(button, userId) {
+                if (button.classList.contains('confirm-delete')) {
+                    // 调用删除接口
+                    fetch(`/admin/users/${userId}/disable`, {
+                        method: 'POST'
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        // 刷新页面
+                        window.location.reload();
+                    });
+                } else {
+                    // 第一次点击，变成红色确认删除
+                    button.classList.add('confirm-delete');
+                    button.style.backgroundColor = '#f44336';
+                    button.textContent = '确认删除';
+                }
+            }
+        </script>
+    </div>
+</body>
+</html>
