@@ -196,7 +196,7 @@
                 try {
                     // 这里可以添加获取用户列表的 API 调用
                     // 暂时使用后端传递的数据
-                    const initialUsers = {{ users | tojson | safe }};
+                    const initialUsers = JSON.parse('{{ users | tojson | safe }}');
                     setUsers(initialUsers);
                 } catch (err) {
                     console.error('Failed to fetch users:', err);
