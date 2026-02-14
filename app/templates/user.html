@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>用户中心</title>
+    <!-- 引入 Vue.js -->
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -72,23 +74,129 @@
     <div class="nav">
         <a href="/user">User</a> | <a href="/admin">Admin</a> | <a href="/auth/logout" class="logout-btn">Logout</a>
     </div>
-    <div class="content">
+    <div class="content" id="app">
         <h1>User Center</h1>
         <p>Welcome to User Center!</p>
         
+        {%raw%}
         <h2>TOTP Management</h2>
-        <form action="/user/totp/rotate" method="post">
-            <button type="submit" class="rotate-btn">Rotate TOTP Secret</button>
-        </form>
-        <form action="/user/totp/qr" method="post">
-            <button type="submit" class="qr-btn">Generate QR Code</button>
+        
+        <form @submit.prevent="rotateTotp">
+            <button type="submit" class="rotate-btn" :disabled="loading">Rotate TOTP Secret</button>
         </form>
         
+        <form @submit.prevent="generateQrCode">
+            <button type="submit" class="qr-btn" :disabled="loading">Generate QR Code</button>
+        </form>
+        
+        <!-- QR Code Result -->
+        <div class="qr-result" v-if="showQrCode">
+            <h3>QR Code</h3>
+            <div>
+                <img :src="qrCodeUrl" alt="QR Code" v-if="qrCodeUrl">
+            </div>
+            <button type="button" class="ok-btn" @click="hideQrCode">OK</button>
+        </div>
+        
+        <!-- Loading State -->
+        <div class="loading" v-if="loading">
+            <p>Loading...</p>
+        </div>
+        
+        <!-- Error Message -->
+        <div class="error-message" v-if="error">
+            {{ error }}
+        </div>
+        
         <div class="logout">
-            <form action="/auth/logout" method="post">
-                <button type="submit" class="logout-btn">Logout</button>
+            <form @submit.prevent="logout">
+                <button type="submit" class="logout-btn" :disabled="loading">Logout</button>
             </form>
         </div>
+        {%endraw%}
+        
+        <script>
+            new Vue({
+                el: '#app',
+                data: {
+                    showQrCode: false,
+                    qrCodeUrl: '',
+                    loading: false,
+                    error: ''
+                },
+                methods: {
+                    rotateTotp() {
+                        this.loading = true;
+                        this.error = '';
+                        
+                        fetch('/user/totp/rotate', {
+                            method: 'POST',
+                            credentials: 'include'
+                        })
+                        .then(response => {
+                            if (!response.ok) {
+                                throw new Error('Failed to rotate TOTP secret');
+                            }
+                            return response.blob();
+                        })
+                        .then(blob => {
+                            this.qrCodeUrl = URL.createObjectURL(blob);
+                            this.showQrCode = true;
+                            this.loading = false;
+                        })
+                        .catch(error => {
+                            this.error = error.message;
+                            this.loading = false;
+                        });
+                    },
+                    generateQrCode() {
+                        this.loading = true;
+                        this.error = '';
+                        
+                        fetch('/user/totp/qr', {
+                            method: 'POST',
+                            credentials: 'include'
+                        })
+                        .then(response => {
+                            if (!response.ok) {
+                                throw new Error('Failed to generate QR code');
+                            }
+                            return response.blob();
+                        })
+                        .then(blob => {
+                            this.qrCodeUrl = URL.createObjectURL(blob);
+                            this.showQrCode = true;
+                            this.loading = false;
+                        })
+                        .catch(error => {
+                            this.error = error.message;
+                            this.loading = false;
+                        });
+                    },
+                    hideQrCode() {
+                        this.showQrCode = false;
+                        this.qrCodeUrl = '';
+                    },
+                    logout() {
+                        this.loading = true;
+                        
+                        fetch('/auth/logout', {
+                            method: 'POST',
+                            credentials: 'include'
+                        })
+                        .then(response => {
+                            if (response.ok) {
+                                window.location.href = '/login';
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                            this.loading = false;
+                        });
+                    }
+                }
+            });
+        </script>
     </div>
 </body>
 </html>

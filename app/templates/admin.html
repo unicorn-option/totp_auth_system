@@ -275,14 +275,8 @@
                         this.loading = true;
                         // 这里可以添加获取用户列表的 API 调用
                         // 暂时使用后端传递的数据
-                        {% for user in users %}
-                        this.users.push({
-                            id: {{ user.id }},
-                            username: '{{ user.username }}',
-                            role: '{{ user.role }}',
-                            is_active: '{{ user.is_active }}'
-                        });
-                        {% endfor %}
+                        const initialUsers = {{ users | tojson }};
+                        this.users = initialUsers;
                         this.loading = false;
                     },
                     createUser() {

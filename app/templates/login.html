@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>登录 - TOTP Auth System</title>
+    <!-- 引入 Vue.js -->
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -62,22 +64,72 @@
     </style>
 </head>
 <body>
-    <div class="login-container">
+    <div class="login-container" id="app">
         <h1>TOTP Auth System</h1>
-        <form action="/auth/login" method="post">
+        
+        {%raw%}
+        <form @submit.prevent="login">
             <div class="form-group">
                 <label for="username">账号</label>
-                <input type="text" id="username" name="username" required>
+                <input type="text" id="username" v-model="loginForm.username" required>
             </div>
             <div class="form-group">
                 <label for="totp_code">动态密码</label>
-                <input type="text" id="totp_code" name="totp_code" required maxlength="6" pattern="[0-9]{6}">
+                <input type="text" id="totp_code" v-model="loginForm.totp_code" required maxlength="6" pattern="[0-9]{6}">
             </div>
-            <button type="submit">登录</button>
+            <button type="submit" :disabled="loading">登录</button>
         </form>
-        {% if error %}
-        <div class="error-message">{{ error }}</div>
-        {% endif %}
+        
+        <div class="error-message" v-if="error">
+            {{ error }}
+        </div>
+        
+        <div class="loading" v-if="loading">
+            <p>Loading...</p>
+        </div>
+        {%endraw%}
+        
+        <script>
+            new Vue({
+                el: '#app',
+                data: {
+                    loginForm: {
+                        username: '',
+                        totp_code: ''
+                    },
+                    error: '',
+                    loading: false
+                },
+                methods: {
+                    login() {
+                        this.loading = true;
+                        this.error = '';
+                        
+                        const formData = new FormData();
+                        formData.append('username', this.loginForm.username);
+                        formData.append('totp_code', this.loginForm.totp_code);
+                        
+                        fetch('/auth/login', {
+                            method: 'POST',
+                            body: formData,
+                            credentials: 'include'
+                        })
+                        .then(response => {
+                            if (response.ok) {
+                                // 登录成功，重定向
+                                window.location.href = '/admin';
+                            } else {
+                                throw new Error('Invalid username or code');
+                            }
+                        })
+                        .catch(error => {
+                            this.error = error.message;
+                            this.loading = false;
+                        });
+                    }
+                }
+            });
+        </script>
     </div>
 </body>
 </html>
