@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>管理后台</title>
+    <!-- 引入 Vue.js -->
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -171,35 +173,43 @@
     <div class="nav">
         <a href="/admin">Admin</a> | <a href="/user">User</a> | <a href="/auth/logout" class="logout-btn">Logout</a>
     </div>
-    <div class="content">
+    <div class="content" id="app">
         <h1>Admin Panel</h1>
         <p>Welcome, Admin!</p>
         
         <h2>User Management</h2>
         
+        {%raw%}
         <!-- Create User Button -->
         <div class="create-user-btn">
-            <button type="button" class="create-btn" onclick="showCreateForm()">Create User</button>
+            <button type="button" class="create-btn" @click="showCreateForm = true">Create User</button>
         </div>
         
         <!-- Create User Form (Hidden by default) -->
-        <div class="create-user-form" id="createForm" style="display: none;">
+        <div class="create-user-form" v-if="showCreateForm">
             <h3>Create New User</h3>
-            <form id="createUserForm" onsubmit="createUser(event)">
+            <form @submit.prevent="createUser">
                 <div class="form-group">
                     <label for="username">Username:</label>
-                    <input type="text" id="username" name="username" required>
+                    <input type="text" id="username" v-model="newUser.username" required>
                 </div>
-                <button type="submit" class="create-btn">Submit</button>
-                <button type="button" class="cancel-btn" onclick="hideCreateForm()">Cancel</button>
+                <button type="submit" class="create-btn" :disabled="loading">Submit</button>
+                <button type="button" class="cancel-btn" @click="showCreateForm = false">Cancel</button>
             </form>
         </div>
         
         <!-- QR Code Result (Hidden by default) -->
-        <div class="qr-result" id="qrResult" style="display: none;">
+        <div class="qr-result" v-if="showQrCode">
             <h3>QR Code</h3>
-            <div id="qrCodeImage"></div>
-            <button type="button" class="ok-btn" onclick="hideQrResult()">OK</button>
+            <div id="qrCodeImage">
+                <img :src="qrCodeUrl" alt="QR Code" v-if="qrCodeUrl">
+            </div>
+            <button type="button" class="ok-btn" @click="hideQrCode">OK</button>
+        </div>
+        
+        <!-- Loading State -->
+        <div class="loading" v-if="loading">
+            <p>Loading...</p>
         </div>
         
         <!-- User Table -->
@@ -215,20 +225,26 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {% for user in users %}
-                    <tr>
+                    <tr v-for="user in users" :key="user.id">
                         <td>{{ user.id }}</td>
                         <td>{{ user.username }}</td>
                         <td>{{ user.role }}</td>
                         <td>{{ user.is_active }}</td>
                         <td>
-                            <button type="button" class="delete-btn" onclick="toggleDelete(this, {{ user.id }})">{{ '删除' }}</button>
+                            <button 
+                                type="button" 
+                                class="delete-btn" 
+                                :class="{ 'confirm-delete': confirmDeleteId === user.id }"
+                                @click="toggleDelete(user.id)"
+                            >
+                                {{ confirmDeleteId === user.id ? '确认删除' : '删除' }}
+                            </button>
                         </td>
                     </tr>
-                    {% endfor %}
                 </tbody>
             </table>
         </div>
+        {%endraw%}
         
         <div class="logout">
             <form action="/auth/logout" method="post">
@@ -237,81 +253,104 @@
         </div>
         
         <script>
-            function showCreateForm() {
-                document.getElementById('createForm').style.display = 'block';
-                document.getElementById('qrResult').style.display = 'none';
-            }
-            
-            function hideCreateForm() {
-                document.getElementById('createForm').style.display = 'none';
-            }
-            
-            function hideQrResult() {
-                document.getElementById('qrResult').style.display = 'none';
-                // 刷新页面以更新用户列表
-                window.location.reload();
-            }
-            
-            function createUser(event) {
-                event.preventDefault();
-                
-                const form = document.getElementById('createUserForm');
-                const formData = new FormData(form);
-                
-                fetch('/admin/users', {
-                    method: 'POST',
-                    body: formData
-                })
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error('Failed to create user');
+            new Vue({
+                el: '#app',
+                data: {
+                    users: [],
+                    newUser: {
+                        username: ''
+                    },
+                    showCreateForm: false,
+                    showQrCode: false,
+                    qrCodeUrl: '',
+                    loading: false,
+                    confirmDeleteId: null
+                },
+                mounted() {
+                    // 初始化时获取用户列表
+                    this.fetchUsers();
+                },
+                methods: {
+                    fetchUsers() {
+                        this.loading = true;
+                        // 这里可以添加获取用户列表的 API 调用
+                        // 暂时使用后端传递的数据
+                        {% for user in users %}
+                        this.users.push({
+                            id: {{ user.id }},
+                            username: '{{ user.username }}',
+                            role: '{{ user.role }}',
+                            is_active: '{{ user.is_active }}'
+                        });
+                        {% endfor %}
+                        this.loading = false;
+                    },
+                    createUser() {
+                        this.loading = true;
+                        
+                        const formData = new FormData();
+                        formData.append('username', this.newUser.username);
+                        
+                        fetch('/admin/users', {
+                            method: 'POST',
+                            body: formData
+                        })
+                        .then(response => {
+                            if (!response.ok) {
+                                throw new Error('Failed to create user');
+                            }
+                            return response.blob();
+                        })
+                        .then(blob => {
+                            // 隐藏创建表单
+                            this.showCreateForm = false;
+                            this.newUser.username = '';
+                            
+                            // 生成 QR Code URL
+                            this.qrCodeUrl = URL.createObjectURL(blob);
+                            this.showQrCode = true;
+                            this.loading = false;
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                            alert('Failed to create user');
+                            this.loading = false;
+                        });
+                    },
+                    hideQrCode() {
+                        this.showQrCode = false;
+                        this.qrCodeUrl = '';
+                        // 刷新用户列表
+                        this.users = [];
+                        this.fetchUsers();
+                    },
+                    toggleDelete(userId) {
+                        if (this.confirmDeleteId === userId) {
+                            // 确认删除
+                            this.loading = true;
+                            fetch(`/admin/users/${userId}/disable`, {
+                                method: 'POST'
+                            })
+                            .then(response => response.json())
+                            .then(data => {
+                                // 刷新用户列表
+                                this.users = [];
+                                this.fetchUsers();
+                                this.confirmDeleteId = null;
+                                this.loading = false;
+                            })
+                            .catch(error => {
+                                console.error('Error:', error);
+                                alert('Failed to delete user');
+                                this.loading = false;
+                            });
+                        } else {
+                            // 第一次点击，显示确认
+                            this.confirmDeleteId = userId;
+                        }
                     }
-                    return response.blob();
-                })
-                .then(blob => {
-                    // 隐藏创建表单
-                    hideCreateForm();
-                    
-                    // 显示 QR Code 结果
-                    const qrResult = document.getElementById('qrResult');
-                    const qrCodeImage = document.getElementById('qrCodeImage');
-                    
-                    // 创建图片元素
-                    const img = document.createElement('img');
-                    img.src = URL.createObjectURL(blob);
-                    img.alt = 'QR Code';
-                    
-                    // 清空并添加图片
-                    qrCodeImage.innerHTML = '';
-                    qrCodeImage.appendChild(img);
-                    
-                    // 显示结果
-                    qrResult.style.display = 'block';
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    alert('Failed to create user');
-                });
-            }
-            
-            function toggleDelete(button, userId) {
-                if (button.classList.contains('confirm-delete')) {
-                    // 调用删除接口
-                    fetch(`/admin/users/${userId}/disable`, {
-                        method: 'POST'
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-                        // 刷新页面
-                        window.location.reload();
-                    });
-                } else {
-                    // 第一次点击，变成红色确认删除
-                    button.classList.add('confirm-delete');
-                    button.style.backgroundColor = '#f44336';
-                    button.textContent = '确认删除';
                 }
-            }
+            });
         </script>
     </div>
 </body>
