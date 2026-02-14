@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>管理后台</title>
+    <!-- 引入 React -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <!-- 引入 Babel -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        .nav {
+            background-color: #f0f0f0;
+            padding: 10px;
+            margin-bottom: 20px;
+        }
+        .nav a {
+            margin-right: 10px;
+            text-decoration: none;
+            color: #333;
+        }
+        .content {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+        }
+        h2 {
+            margin-top: 20px;
+        }
+        .create-user-btn {
+            margin-bottom: 20px;
+        }
+        .create-btn {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .create-btn:hover {
+            background-color: #45a049;
+        }
+        .create-btn:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        .create-user-form {
+            margin-bottom: 20px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+        .cancel-btn {
+            background-color: #999;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-left: 10px;
+        }
+        .cancel-btn:hover {
+            background-color: #777;
+        }
+        .form-group {
+            margin-bottom: 10px;
+        }
+        .form-group label {
+            display: inline-block;
+            width: 100px;
+        }
+        .form-group input {
+            padding: 5px;
+            width: 200px;
+        }
+        .user-table {
+            margin-top: 20px;
+            overflow-x: auto;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: #fff;
+        }
+        th, td {
+            text-align: left;
+            padding: 12px;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #f2f2f2;
+            font-weight: bold;
+        }
+        tr:hover {
+            background-color: #f5f5f5;
+        }
+        .delete-btn {
+            background-color: #ff9800;
+            color: white;
+            padding: 8px 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .delete-btn:hover {
+            background-color: #f57c00;
+        }
+        .confirm-delete {
+            background-color: #f44336 !important;
+        }
+        .confirm-delete:hover {
+            background-color: #d32f2f !important;
+        }
+        .qr-result {
+            margin-top: 20px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+            text-align: center;
+        }
+        #qrCodeImage img {
+            max-width: 300px;
+            max-height: 300px;
+        }
+        .ok-btn {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+        .ok-btn:hover {
+            background-color: #45a049;
+        }
+        .loading {
+            margin-top: 10px;
+            color: #666;
+        }
+        .logout {
+            margin-top: 20px;
+        }
+        .logout-btn {
+            background-color: #f44336;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .logout-btn:hover {
+            background-color: #d32f2f;
+        }
+    </style>
+</head>
+<body>
+    <div class="nav">
+        <a href="/admin">Admin</a> | <a href="/user">User</a> | <a href="/auth/logout" class="logout-btn">Logout</a>
+    </div>
+    <div id="root"></div>
+    
+    {%raw%}
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+        const { createRoot } = ReactDOM;
+        
+        function AdminPage() {
+            const [users, setUsers] = useState([]);
+            const [showCreateForm, setShowCreateForm] = useState(false);
+            const [newUsername, setNewUsername] = useState('');
+            const [showQrCode, setShowQrCode] = useState(false);
+            const [qrCodeUrl, setQrCodeUrl] = useState('');
+            const [loading, setLoading] = useState(false);
+            const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+            
+            // 初始化时获取用户列表
+            useEffect(() => {
+                fetchUsers();
+            }, []);
+            
+            const fetchUsers = async () => {
+                setLoading(true);
+                try {
+                    // 这里可以添加获取用户列表的 API 调用
+                    // 暂时使用后端传递的数据
+                    const initialUsers = {{ users | tojson | safe }};
+                    setUsers(initialUsers);
+                } catch (err) {
+                    console.error('Failed to fetch users:', err);
+                } finally {
+                    setLoading(false);
+                }
+            };
+            
+            const createUser = async (e) => {
+                e.preventDefault();
+                setLoading(true);
+                
+                try {
+                    const formData = new FormData();
+                    formData.append('username', newUsername);
+                    
+                    const response = await fetch('/admin/users', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error('Failed to create user');
+                    }
+                    
+                    const blob = await response.blob();
+                    setQrCodeUrl(URL.createObjectURL(blob));
+                    setShowQrCode(true);
+                    setShowCreateForm(false);
+                    setNewUsername('');
+                    fetchUsers(); // 刷新用户列表
+                } catch (err) {
+                    console.error('Failed to create user:', err);
+                } finally {
+                    setLoading(false);
+                }
+            };
+            
+            const toggleDelete = async (userId) => {
+                if (confirmDeleteId === userId) {
+                    // 确认删除
+                    setLoading(true);
+                    try {
+                        const response = await fetch(`/admin/users/${userId}/disable`, {
+                            method: 'POST'
+                        });
+                        
+                        if (response.ok) {
+                            fetchUsers(); // 刷新用户列表
+                        }
+                    } catch (err) {
+                        console.error('Failed to delete user:', err);
+                    } finally {
+                        setLoading(false);
+                        setConfirmDeleteId(null);
+                    }
+                } else {
+                    // 第一次点击，显示确认
+                    setConfirmDeleteId(userId);
+                }
+            };
+            
+            return (
+                <div className="content">
+                    <h1>Admin Panel</h1>
+                    <p>Welcome, Admin!</p>
+                    
+                    <h2>User Management</h2>
+                    
+                    {/* Create User Button */}
+                    <div className="create-user-btn">
+                        <button 
+                            type="button" 
+                            className="create-btn" 
+                            onClick={() => setShowCreateForm(true)}
+                            disabled={loading}
+                        >
+                            Create User
+                        </button>
+                    </div>
+                    
+                    {/* Create User Form (Hidden by default) */}
+                    {showCreateForm && (
+                        <div className="create-user-form">
+                            <h3>Create New User</h3>
+                            <form onSubmit={createUser}>
+                                <div className="form-group">
+                                    <label htmlFor="username">Username:</label>
+                                    <input 
+                                        type="text" 
+                                        id="username" 
+                                        value={newUsername}
+                                        onChange={(e) => setNewUsername(e.target.value)}
+                                        required
+                                    />
+                                </div>
+                                <button 
+                                    type="submit" 
+                                    className="create-btn"
+                                    disabled={loading}
+                                >
+                                    Submit
+                                </button>
+                                <button 
+                                    type="button" 
+                                    className="cancel-btn" 
+                                    onClick={() => setShowCreateForm(false)}
+                                >
+                                    Cancel
+                                </button>
+                            </form>
+                        </div>
+                    )}
+                    
+                    {/* QR Code Result (Hidden by default) */}
+                    {showQrCode && (
+                        <div className="qr-result">
+                            <h3>QR Code</h3>
+                            <div id="qrCodeImage">
+                                {qrCodeUrl && <img src={qrCodeUrl} alt="QR Code" />}
+                            </div>
+                            <button 
+                                type="button" 
+                                className="ok-btn" 
+                                onClick={() => setShowQrCode(false)}
+                            >
+                                OK
+                            </button>
+                        </div>
+                    )}
+                    
+                    {/* Loading State */}
+                    {loading && (
+                        <div className="loading">
+                            <p>Loading...</p>
+                        </div>
+                    )}
+                    
+                    {/* User Table */}
+                    <div className="user-table">
+                        <table border="1" cellpadding="10" cellspacing="0">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Username</th>
+                                    <th>Role</th>
+                                    <th>Status</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {users.map(user => (
+                                    <tr key={user.id}>
+                                        <td>{user.id}</td>
+                                        <td>{user.username}</td>
+                                        <td>{user.role}</td>
+                                        <td>{user.is_active}</td>
+                                        <td>
+                                            <button 
+                                                type="button" 
+                                                className={`delete-btn ${confirmDeleteId === user.id ? 'confirm-delete' : ''}`}
+                                                onClick={() => toggleDelete(user.id)}
+                                            >
+                                                {confirmDeleteId === user.id ? '确认删除' : '删除'}
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div className="logout">
+                        <form action="/auth/logout" method="post">
+                            <button type="submit" className="logout-btn">Logout</button>
+                        </form>
+                    </div>
+                </div>
+            );
+        }
+        
+        createRoot(document.getElementById('root')).render(<AdminPage />);
+    </script>
+    {%endraw%}
+</body>
+</html>
