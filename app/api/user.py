@@ -20,4 +20,4 @@ def verify_user(request: Request):
 async def user_page(request: Request):
     """用户中心页面"""
     verify_user(request)
-    return templates.TemplateResponse("user.html", {"request": request})
+    return templates.TemplateResponse("user-react.page", {"request": request})

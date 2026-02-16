@@ -4,76 +4,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>用户中心</title>
+    <!-- 引入共用 JavaScript 文件 -->
+    <script src="/static/js/common.js"></script>
     <!-- 引入 Vue.js -->
     <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.js"></script>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-        }
-        .nav {
-            background-color: #f0f0f0;
-            padding: 10px;
-            margin-bottom: 20px;
-        }
-        .nav a {
-            margin-right: 10px;
-            text-decoration: none;
-            color: #333;
-        }
-        .content {
-            background-color: #fff;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        h1 {
-            color: #333;
-        }
-        .logout {
-            margin-top: 20px;
-        }
-        .logout-btn {
-            background-color: #f44336;
-            color: white;
-            padding: 10px 15px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-        .logout-btn:hover {
-            background-color: #d32f2f;
-        }
-        .rotate-btn {
-            background-color: #1890ff;
-            color: white;
-            padding: 10px 15px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            margin-top: 10px;
-        }
-        .rotate-btn:hover {
-            background-color: #40a9ff;
-        }
-        .qr-btn {
-            background-color: #ff9800;
-            color: white;
-            padding: 10px 15px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            margin-top: 10px;
-        }
-        .qr-btn:hover {
-            background-color: #f57c00;
-        }
-    </style>
+    <!-- 引入 QR Code 生成库 -->
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
+    <!-- 引入静态样式文件 -->
+    <link rel="stylesheet" href="/static/css/styles.css">
 </head>
 <body>
-    <div class="nav">
-        <a href="/user">User</a> | <a href="/admin">Admin</a> | <a href="/auth/logout" class="logout-btn">Logout</a>
-    </div>
+    {% include "navbar-vue.html" %}
     <div class="content" id="app">
         <h1>User Center</h1>
         <p>Welcome to User Center!</p>
@@ -107,12 +48,6 @@
         <div class="error-message" v-if="error">
             {{ error }}
         </div>
-        
-        <div class="logout">
-            <form @submit.prevent="logout">
-                <button type="submit" class="logout-btn" :disabled="loading">Logout</button>
-            </form>
-        </div>
         {%endraw%}
         
         <script>
@@ -125,74 +60,43 @@
                     error: ''
                 },
                 methods: {
-                    rotateTotp() {
+                    async rotateTotp() {
                         this.loading = true;
                         this.error = '';
                         
-                        fetch('/user/totp/rotate', {
-                            method: 'POST',
-                            credentials: 'include'
-                        })
-                        .then(response => {
-                            if (!response.ok) {
-                                throw new Error('Failed to rotate TOTP secret');
-                            }
-                            return response.blob();
-                        })
-                        .then(blob => {
-                            this.qrCodeUrl = URL.createObjectURL(blob);
+                        try {
+                            // 旋转 TOTP 密钥
+                            const data = await ApiUtils.rotateTotp();
+                            
+                            // 生成 QR Code
+                            this.qrCodeUrl = await ApiUtils.generateQRCode(data.uri);
                             this.showQrCode = true;
-                            this.loading = false;
-                        })
-                        .catch(error => {
+                        } catch (error) {
                             this.error = error.message;
+                        } finally {
                             this.loading = false;
-                        });
+                        }
                     },
-                    generateQrCode() {
+                    async generateQrCode() {
                         this.loading = true;
                         this.error = '';
                         
-                        fetch('/user/totp/qr', {
-                            method: 'POST',
-                            credentials: 'include'
-                        })
-                        .then(response => {
-                            if (!response.ok) {
-                                throw new Error('Failed to generate QR code');
-                            }
-                            return response.blob();
-                        })
-                        .then(blob => {
-                            this.qrCodeUrl = URL.createObjectURL(blob);
+                        try {
+                            // 获取 TOTP URI
+                            const data = await ApiUtils.generateTotpQrCode();
+                            
+                            // 生成 QR Code
+                            this.qrCodeUrl = await ApiUtils.generateQRCode(data.uri);
                             this.showQrCode = true;
-                            this.loading = false;
-                        })
-                        .catch(error => {
+                        } catch (error) {
                             this.error = error.message;
+                        } finally {
                             this.loading = false;
-                        });
+                        }
                     },
                     hideQrCode() {
                         this.showQrCode = false;
                         this.qrCodeUrl = '';
-                    },
-                    logout() {
-                        this.loading = true;
-                        
-                        fetch('/auth/logout', {
-                            method: 'POST',
-                            credentials: 'include'
-                        })
-                        .then(response => {
-                            if (response.ok) {
-                                window.location.href = '/login';
-                            }
-                        })
-                        .catch(error => {
-                            console.error('Error:', error);
-                            this.loading = false;
-                        });
                     }
                 }
             });

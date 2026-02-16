@@ -6,60 +6,18 @@
     <title>登录 - TOTP Auth System</title>
     <!-- 引入 Vue.js -->
     <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.js"></script>
+    <!-- 引入共用 JavaScript 文件 -->
+    <script src="/static/js/common.js"></script>
+    <!-- 引入静态样式文件 -->
+    <link rel="stylesheet" href="/static/css/styles.css">
     <style>
         body {
-            font-family: Arial, sans-serif;
             background-color: #f0f2f5;
             display: flex;
             justify-content: center;
             align-items: center;
             height: 100vh;
             margin: 0;
-        }
-        .login-container {
-            background-color: white;
-            padding: 40px;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-            width: 400px;
-            text-align: center;
-        }
-        h1 {
-            color: #333;
-            margin-bottom: 30px;
-        }
-        .form-group {
-            margin-bottom: 20px;
-            text-align: left;
-        }
-        label {
-            display: block;
-            margin-bottom: 5px;
-            color: #666;
-        }
-        input {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            font-size: 16px;
-        }
-        button {
-            width: 100%;
-            padding: 12px;
-            background-color: #1890ff;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            font-size: 16px;
-            cursor: pointer;
-        }
-        button:hover {
-            background-color: #40a9ff;
-        }
-        .error-message {
-            color: #ff4d4f;
-            margin-top: 10px;
         }
     </style>
 </head>
@@ -101,31 +59,23 @@
                     loading: false
                 },
                 methods: {
-                    login() {
+                    async login() {
                         this.loading = true;
                         this.error = '';
                         
-                        const formData = new FormData();
-                        formData.append('username', this.loginForm.username);
-                        formData.append('totp_code', this.loginForm.totp_code);
-                        
-                        fetch('/auth/login', {
-                            method: 'POST',
-                            body: formData,
-                            credentials: 'include'
-                        })
-                        .then(response => {
-                            if (response.ok) {
-                                // 登录成功，重定向
-                                window.location.href = '/admin';
-                            } else {
-                                throw new Error('Invalid username or code');
-                            }
-                        })
-                        .catch(error => {
+                        try {
+                            const result = await ApiUtils.login(
+                                this.loginForm.username,
+                                this.loginForm.totp_code
+                            );
+                            
+                            // 根据用户角色重定向
+                            window.location.href = result.redirectUrl;
+                        } catch (error) {
                             this.error = error.message;
+                        } finally {
                             this.loading = false;
-                        });
+                        }
                     }
                 }
             });

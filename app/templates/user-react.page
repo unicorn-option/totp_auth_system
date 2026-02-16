@@ -4,122 +4,20 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>用户中心</title>
+    <!-- 引入共用 JavaScript 文件 -->
+    <script src="/static/js/common.js"></script>
     <!-- 引入 React -->
     <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
     <!-- 引入 Babel -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-        }
-        .nav {
-            background-color: #f0f0f0;
-            padding: 10px;
-            margin-bottom: 20px;
-        }
-        .nav a {
-            margin-right: 10px;
-            text-decoration: none;
-            color: #333;
-        }
-        .content {
-            background-color: #fff;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        h1 {
-            color: #333;
-        }
-        h2 {
-            margin-top: 20px;
-        }
-        .rotate-btn {
-            background-color: #1890ff;
-            color: white;
-            padding: 10px 15px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            margin-top: 10px;
-        }
-        .rotate-btn:hover {
-            background-color: #40a9ff;
-        }
-        .rotate-btn:disabled {
-            background-color: #ccc;
-            cursor: not-allowed;
-        }
-        .qr-btn {
-            background-color: #ff9800;
-            color: white;
-            padding: 10px 15px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            margin-top: 10px;
-        }
-        .qr-btn:hover {
-            background-color: #f57c00;
-        }
-        .qr-btn:disabled {
-            background-color: #ccc;
-            cursor: not-allowed;
-        }
-        .qr-result {
-            margin-top: 20px;
-            padding: 20px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            background-color: #f9f9f9;
-            text-align: center;
-        }
-        .qr-result img {
-            max-width: 300px;
-            max-height: 300px;
-        }
-        .ok-btn {
-            background-color: #4CAF50;
-            color: white;
-            padding: 10px 20px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            margin-top: 20px;
-        }
-        .ok-btn:hover {
-            background-color: #45a049;
-        }
-        .logout {
-            margin-top: 20px;
-        }
-        .logout-btn {
-            background-color: #f44336;
-            color: white;
-            padding: 10px 15px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-        .logout-btn:hover {
-            background-color: #d32f2f;
-        }
-        .loading {
-            margin-top: 10px;
-            color: #666;
-        }
-        .error-message {
-            color: #ff4d4f;
-            margin-top: 10px;
-        }
-    </style>
+    <!-- 引入 QR Code 生成库 -->
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
+    <!-- 引入静态样式文件 -->
+    <link rel="stylesheet" href="/static/css/styles.css">
 </head>
 <body>
-    <div class="nav">
-        <a href="/user">User</a> | <a href="/admin">Admin</a> | <a href="/auth/logout" class="logout-btn">Logout</a>
-    </div>
+    {% include "navbar-react.html" %}
     <div id="root"></div>
     
     {%raw%}
@@ -139,17 +37,12 @@
                 setError('');
                 
                 try {
-                    const response = await fetch('/user/totp/rotate', {
-                        method: 'POST',
-                        credentials: 'include'
-                    });
+                    // 旋转 TOTP 密钥
+                    const data = await ApiUtils.rotateTotp();
                     
-                    if (!response.ok) {
-                        throw new Error('Failed to rotate TOTP secret');
-                    }
-                    
-                    const blob = await response.blob();
-                    setQrCodeUrl(URL.createObjectURL(blob));
+                    // 生成 QR Code
+                    const qrUrl = await ApiUtils.generateQRCode(data.uri);
+                    setQrCodeUrl(qrUrl);
                     setShowQrCode(true);
                 } catch (err) {
                     setError(err.message);
@@ -164,17 +57,12 @@
                 setError('');
                 
                 try {
-                    const response = await fetch('/user/totp/qr', {
-                        method: 'POST',
-                        credentials: 'include'
-                    });
+                    // 获取 TOTP URI
+                    const data = await ApiUtils.generateTotpQrCode();
                     
-                    if (!response.ok) {
-                        throw new Error('Failed to generate QR code');
-                    }
-                    
-                    const blob = await response.blob();
-                    setQrCodeUrl(URL.createObjectURL(blob));
+                    // 生成 QR Code
+                    const qrUrl = await ApiUtils.generateQRCode(data.uri);
+                    setQrCodeUrl(qrUrl);
                     setShowQrCode(true);
                 } catch (err) {
                     setError(err.message);
@@ -183,25 +71,7 @@
                 }
             };
             
-            const logout = async (e) => {
-                e.preventDefault();
-                setLoading(true);
-                
-                try {
-                    const response = await fetch('/auth/logout', {
-                        method: 'POST',
-                        credentials: 'include'
-                    });
-                    
-                    if (response.ok) {
-                        window.location.href = '/login';
-                    }
-                } catch (err) {
-                    console.error('Failed to logout:', err);
-                } finally {
-                    setLoading(false);
-                }
-            };
+
             
             return (
                 <div className="content">
@@ -260,18 +130,6 @@
                             {error}
                         </div>
                     )}
-                    
-                    <div className="logout">
-                        <form onSubmit={logout}>
-                            <button 
-                                type="submit" 
-                                className="logout-btn"
-                                disabled={loading}
-                            >
-                                Logout
-                            </button>
-                        </form>
-                    </div>
                 </div>
             );
         }

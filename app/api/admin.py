@@ -31,7 +31,7 @@ async def admin_page(request: Request):
     # 获取用户列表
     users = get_users()
     
-    return templates.TemplateResponse("admin.html", {"request": request, "users": users})
+    return templates.TemplateResponse("admin-vue.page", {"request": request, "users": users})
 
 def get_users():
     """获取用户列表"""
@@ -61,11 +61,8 @@ async def create_user(request: Request, username: str = Form(...)):
     # 2. 创建用户
     user_id, username, role, uri = user_manager.create_user(username, "user")
     
-    # 3. 生成 QR Code
-    qr_code = totp_manager.generate_qr_code(uri)
-    
-    # 4. 返回 QR Code
-    return StreamingResponse(qr_code, media_type="image/png")
+    # 3. 返回 QR Code URI
+    return {"uri": uri, "username": username}
 
 
 @router.post("/admin/users/{id}/disable")
@@ -80,6 +77,29 @@ async def disable_user_by_id(request: Request, id: int):
         raise HTTPException(status_code=404, detail="User not found")
     
     return {"message": "User disabled successfully"}
+
+@router.get("/api/users")
+async def get_users_api(request: Request, page: int = 1, limit: int = 10):
+    """获取用户列表 API"""
+    # 校验超级管理员权限
+    verify_admin(request)
+    
+    # 获取用户列表
+    users = get_users()
+    
+    # 分页处理
+    total = len(users)
+    start = (page - 1) * limit
+    end = start + limit
+    paginated_users = users[start:end]
+    
+    return {
+        "users": paginated_users,
+        "total": total,
+        "page": page,
+        "limit": limit,
+        "pages": (total + limit - 1) // limit
+    }
 
 @router.post("/admin/users/disable")
 async def disable_user(request: Request, user_id: int = Form(...)):

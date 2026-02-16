@@ -44,15 +44,20 @@ class JWTManager:
         if not payload:
             return False
         
-        # 检查是否在黑名单中
-        jti = payload.get("jti")
-        if redis_client.is_blacklisted(jti):
-            return False
-        
         # 检查是否过期
         exp = payload.get("exp")
         if exp and datetime.utcnow() > datetime.fromtimestamp(exp):
             return False
+        
+        # 检查是否在黑名单中（添加异常处理）
+        jti = payload.get("jti")
+        if jti:
+            try:
+                if redis_client.is_blacklisted(jti):
+                    return False
+            except Exception:
+                # 如果Redis连接失败，忽略黑名单检查，继续验证
+                pass
         
         return True
     

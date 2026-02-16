@@ -2,8 +2,8 @@ from fastapi import APIRouter, HTTPException, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from app.models.user import user_manager
-from app.core.totp import totp_manager
 from app.core.jwt import jwt_manager
+from app.core.totp import totp_manager
 from app.core.redis import redis_client
 
 router = APIRouter()
@@ -13,7 +13,7 @@ templates = Jinja2Templates(directory="app/templates")
 @router.get("/login", response_class=HTMLResponse)
 async def login_page(request: Request):
     """登录页面"""
-    return templates.TemplateResponse("login.html", {"request": request})
+    return templates.TemplateResponse("login-react.page", {"request": request})
 
 
 @router.post("/auth/login")
@@ -39,11 +39,16 @@ async def login(username: str = Form(...), totp_code: str = Form(...)):
     # 4. 生成 Refresh Token
     refresh_token = jwt_manager.create_refresh_token(user["id"])
     
-    # 5. 返回 Token
-    response = RedirectResponse(url="/admin" if user["role"] == "super_admin" else "/user", status_code=302)
-    response.set_cookie(key="access_token", value=access_token, httponly=True)
-    response.set_cookie(key="refresh_token", value=refresh_token, httponly=True)
-    return response
+    # 5. 返回 Token 和用户信息
+    return {
+        "access_token": access_token,
+        "refresh_token": refresh_token,
+        "user": {
+            "id": user["id"],
+            "username": user["username"],
+            "role": user["role"]
+        }
+    }
 
 
 @router.post("/auth/logout")
@@ -82,12 +87,8 @@ async def rotate_totp(request: Request):
     # 轮换密钥
     uri = user_manager.rotate_totp_secret(user_id, user["username"])
     
-    # 生成 QR Code
-    qr_code = totp_manager.generate_qr_code(uri)
-    
-    # 返回 QR Code 图片
-    from fastapi.responses import StreamingResponse
-    return StreamingResponse(qr_code, media_type="image/png")
+    # 返回 QR Code URI
+    return {"uri": uri}
 
 @router.post("/user/totp/qr")
 async def generate_qr(request: Request):
@@ -114,9 +115,5 @@ async def generate_qr(request: Request):
     # 生成 otpauth URI
     uri = totp_manager.generate_otpauth_uri(user["username"], secret)
     
-    # 生成 QR Code
-    qr_code = totp_manager.generate_qr_code(uri)
-    
-    # 返回 QR Code 图片
-    from fastapi.responses import StreamingResponse
-    return StreamingResponse(qr_code, media_type="image/png")
+    # 返回 QR Code URI
+    return {"uri": uri}
