@@ -31,7 +31,7 @@ async def admin_page(request: Request):
     # 获取用户列表
     users = get_users()
     
-    return templates.TemplateResponse("admin-vue.page", {"request": request, "users": users})
+    return templates.TemplateResponse("admin-vue.html", {"request": request, "users": users})
 
 def get_users():
     """获取用户列表"""

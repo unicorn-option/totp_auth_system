@@ -5,7 +5,7 @@ REDIS_URL = os.getenv("REDIS_URL")
 JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY")
 
 # TOTP 配置
-TOTP_ISSUER = "DemoApp"
+TOTP_ISSUER = "TOTP_demo"
 TOTP_DIGITS = 6
 TOTP_INTERVAL = 30
 

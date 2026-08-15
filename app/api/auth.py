@@ -13,7 +13,7 @@ templates = Jinja2Templates(directory="app/templates")
 @router.get("/login", response_class=HTMLResponse)
 async def login_page(request: Request):
     """登录页面"""
-    return templates.TemplateResponse("login-react.page", {"request": request})
+    return templates.TemplateResponse("login-react.html", {"request": request})
 
 
 @router.post("/auth/login")
